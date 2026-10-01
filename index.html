@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>杂事管家 · 大学生零散事务智能归集整理 Agent</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f5f6fa;--card:#fff;--tx:#1f2430;--sub:#6b7285;--bd:#e3e6ee;--pri:#4361ee;--red:#e5484d;--redbg:#fdecec;--amb:#b7791f;--ambbg:#fff4dc;--grn:#2f9e6b;--grnbg:#e3f6ec}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14161c;--card:#1d2029;--tx:#e8eaf0;--sub:#9aa1b3;--bd:#2d3140;--pri:#7b93ff;--red:#ff7a7f;--redbg:#3a2022;--amb:#f0b95a;--ambbg:#36301c;--grn:#58d39b;--grnbg:#1b3328}}
+:root[data-theme="dark"]{--bg:#14161c;--card:#1d2029;--tx:#e8eaf0;--sub:#9aa1b3;--bd:#2d3140;--pri:#7b93ff;--red:#ff7a7f;--redbg:#3a2022;--amb:#f0b95a;--ambbg:#36301c;--grn:#58d39b;--grnbg:#1b3328}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:8px 0 2px}
+.sub{color:var(--sub);font-size:13px;margin:0 0 14px}
+.tabs{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto}
+.tab{flex:1;min-width:76px;padding:9px 6px;border:1px solid var(--bd);background:var(--card);color:var(--sub);border-radius:10px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap}
+.tab.on{background:var(--pri);border-color:var(--pri);color:#fff}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+textarea,input{width:100%;font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:10px;outline:none}
+textarea{min-height:130px;resize:vertical}
+textarea:focus,input:focus{border-color:var(--pri)}
+.btn{border:0;background:var(--pri);color:#fff;border-radius:10px;padding:9px 16px;font:inherit;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--pri);border:1px solid var(--bd)}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;margin-right:6px}
+.urgent{background:var(--redbg);color:var(--red)}.normal{background:var(--ambbg);color:var(--amb)}.later{background:var(--grnbg);color:var(--grn)}
+.task h3{font-size:15px;margin:4px 0}
+.meta{color:var(--sub);font-size:13px}
+.why{font-size:13px;color:var(--sub);margin-top:4px}
+.empty{text-align:center;color:var(--sub);padding:28px 0}
+.msg{font-size:13px;margin-top:8px;color:var(--sub);white-space:pre-wrap}
+.brief{white-space:pre-wrap}
+.stats{display:flex;gap:8px;margin-bottom:12px}.stat{flex:1;text-align:center;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:8px}
+.stat b{font-size:20px;display:block}
+.over{color:var(--red);font-weight:600}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>📌 杂事管家</h1>
+<p class="sub">大学生零散事务智能归集整理 Agent · 复制群通知，AI 自动提取、排优先级、归档留证</p>
+
+<div class="stats">
+<div class="stat"><b id="s1">0</b><span class="meta">待办</span></div>
+<div class="stat"><b id="s2" style="color:var(--red)">0</b><span class="meta">紧急</span></div>
+<div class="stat"><b id="s3" style="color:var(--grn)">0</b><span class="meta">已归档</span></div>
+</div>
+
+<div class="tabs" id="tabs">
+<button class="tab on" data-t="add">① 抓取识别</button>
+<button class="tab" data-t="list">② 待办优先级</button>
+<button class="tab" data-t="today">③ 今日推送</button>
+<button class="tab" data-t="arch">④ 归档凭证</button>
+</div>
+
+<section id="p-add">
+<div class="card">
+<b>粘贴班级群 / 通知文字</b>
+<p class="meta" style="margin:2px 0 8px">可一次粘贴多条消息，Agent 自动识别填表、截图、打卡、报名、作业、材料上交等事项。</p>
+<textarea id="src" placeholder="例如：@全体同学 请于本周五18:00前在问卷星填写体测登记表，并截图发群里……"></textarea>
+<div class="row">
+<button class="btn" id="go">🔍 智能识别</button>
+<button class="btn ghost" id="demo">填入示例</button>
+</div>
+<div class="msg" id="addmsg"></div>
+</div>
+</section>
+
+<section id="p-list" class="hide"><div id="list"></div></section>
+
+<section id="p-today" class="hide">
+<div class="card">
+<b>今日待办智能推送</b>
+<p class="meta" style="margin:2px 0 8px">Agent 整理：今天必须交的、快截止的、容易遗漏的。</p>
+<button class="btn" id="brief">生成今日推送</button>
+<div class="brief" id="briefout" style="margin-top:10px"></div>
+</div>
+</section>
+
+<section id="p-arch" class="hide">
+<div class="card">
+<b>告诉 Agent 你做完了什么</b>
+<p class="meta" style="margin:2px 0 8px">比如“我把体测登记表填完并截图发群里了”，Agent 自动匹配待办并归档。</p>
+<input id="done" placeholder="我做完了……">
+<div class="row"><button class="btn" id="donebtn">✅ 归档</button></div>
+<div class="msg" id="donemsg"></div>
+</div>
+<div class="card">
+<input id="q" placeholder="🔎 老师查记录？搜索关键词，一秒调出凭证">
+</div>
+<div id="arch"></div>
+</section>
+</div>
+
+<script>
+const KEY='campus-agent-v1';
+let tasks=[];
+try{tasks=JSON.parse(localStorage.getItem(KEY)||'[]')||[]}catch(e){tasks=[]}
+const $=id=>document.getElementById(id);
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(tasks))}catch(e){}};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const PL={urgent:'🔴 紧急扣分',normal:'🟡 普通任务',later:'🟢 可延后'};
+const ORD={urgent:0,normal:1,later:2};
+
+function today(){const d=new Date();return d.toLocaleDateString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',weekday:'long'})+' '+d.toTimeString().slice(0,5)}
+function isOver(t){return t.deadline&&!t.done&&new Date(t.deadline)<new Date()}
+function pend(){return tasks.filter(t=>!t.done).sort((a,b)=>(ORD[a.priority]-ORD[b.priority])||((a.deadline||'9')>(b.deadline||'9')?1:-1))}
+
+function tab(n){
+ ['add','list','today','arch'].forEach(k=>$('p-'+k).classList.toggle('hide',k!==n));
+ document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===n));
+ render();
+}
+$('tabs').onclick=e=>{if(e.target.dataset.t)tab(e.target.dataset.t)};
+
+function render(){
+ const p=pend();
+ $('s1').textContent=p.length;
+ $('s2').textContent=p.filter(t=>t.priority==='urgent'||isOver(t)).length;
+ $('s3').textContent=tasks.filter(t=>t.done).length;
+ $('list').innerHTML=p.length?p.map(t=>`<div class="card task"><span class="tag ${t.priority}">${PL[t.priority]}</span>${isOver(t)?'<span class="tag urgent">已逾期</span>':''}
+ <h3>${esc(t.title)}</h3>
+ <div class="meta">⏰ ${esc(t.deadlineText||'未标注截止时间')}${t.deadline?'':''}</div>
+ <div class="meta">📎 需提交：${esc(t.materials||'无')}</div>
+ <div class="why">💡 ${esc(t.reason||'')}</div>
+ <div class="row"><button class="btn" onclick="finish('${t.id}')">标记完成并归档</button><button class="btn ghost" onclick="del('${t.id}')">删除</button></div></div>`).join(''):'<div class="empty">🎉 暂无待办<br>去「抓取识别」粘贴一条通知试试</div>';
+ const q=($('q').value||'').trim();
+ const a=tasks.filter(t=>t.done&&(!q||JSON.stringify(t).includes(q))).sort((x,y)=>(y.doneAt||'')>(x.doneAt||'')?1:-1);
+ $('arch').innerHTML=a.length?a.map(t=>`<div class="card task"><span class="tag later">${esc(t.category||'其他')}</span><h3>${esc(t.title)}</h3>
+ <div class="meta">完成于 ${esc(t.doneAt||'')} ｜ 截止：${esc(t.deadlineText||'—')}</div>
+ <div class="meta">📎 ${esc(t.materials||'无')}</div>
+ ${t.note?`<div class="why">🧾 凭证记录：${esc(t.note)}</div>`:''}</div>`).join(''):'<div class="empty">'+(q?'没有匹配的记录':'还没有归档记录')+'</div>';
+}
+function del(id){tasks=tasks.filter(t=>t.id!==id);save();render()}
+function finish(id,note,cat){const t=tasks.find(x=>x.id===id);if(!t)return;t.done=true;t.doneAt=new Date().toLocaleString('zh-CN',{hour12:false});t.note=note||'手动标记完成';t.category=cat||guessCat(t);save();render()}
+function guessCat(t){const s=(t.title||'')+(t.materials||'');return /表|问卷|登记/.test(s)?'报名表/问卷':/截图/.test(s)?'截图':/回执/.test(s)?'回执':/作业|论文|报告/.test(s)?'作业':/申报|材料/.test(s)?'申报材料':'其他'}
+
+async function ai(prompt,json){
+ const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,json:!!json})});
+ const d=await r.json().catch(()=>({}));
+ if(!r.ok)throw {code:'api',message:d.error||('服务暂不可用('+r.status+')')};
+ if(json){try{return JSON.parse(String(d.text).replace(/```json|```/g,'').trim())}catch(e){throw {code:'parse',message:'AI 返回格式有误，请重试'}}}
+ return {text:d.text};
+}
+function errTxt(e){return '⚠️ '+(e&&e.message||e)}
+
+$('demo').onclick=()=>{$('src').value=`【辅导员】@全体同学 本周五（10月2日）18:00前，请在问卷星填写《秋季体测登记表》，并把提交成功截图发到班级群，逾期按综测扣2分！\n\n【学习委员】高数第三章作业下周一早8点前交到学习通，迟交不记成绩。\n\n【团支书】社团联合会招新活动报名，月底前回复接龙即可，自愿参加。\n\n【宿管】本月宿舍安全检查回执，本周日晚前填好交给楼长。`};
+
+$('go').onclick=async()=>{
+ const text=$('src').value.trim();if(!text){$('addmsg').textContent='请先粘贴通知文字';return}
+ $('go').disabled=true;$('addmsg').textContent='Agent 正在识别……（约 5-30 秒）';
+ try{
+  const r=await ai(`你是大学生校园事务整理Agent。当前时间：${today()}。\n从下面的群消息/通知中提取所有需要学生行动的事项（填表、截图提交、打卡、报名、作业截止、材料上交、回执等）。纯信息类消息忽略。\n只返回JSON，不要任何其他文字，格式：{"tasks":[{"title":"简短任务名","deadlineISO":"YYYY-MM-DDTHH:mm（无法确定则空字符串）","deadlineText":"原文截止时间描述","materials":"需要提交的材料，没有则空","priority":"urgent|normal|later","reason":"一句话说明优先级判断理由"}]}\n优先级规则：urgent=有扣分/不记成绩等后果或24-48小时内截止；normal=有明确截止但无明显后果；later=自愿参加或截止较远。\n\n通知内容：\n${text}`,true);
+  const arr=(r&&r.tasks)||[];
+  arr.forEach((x,i)=>tasks.push({id:'t'+Date.now()+i,title:x.title||'未命名事项',deadline:x.deadlineISO||'',deadlineText:x.deadlineText||'',materials:x.materials||'',priority:ORD[x.priority]!==undefined?x.priority:'normal',reason:x.reason||'',done:false}));
+  save();render();
+  $('addmsg').textContent=arr.length?`✅ 识别出 ${arr.length} 项事务，已按优先级加入待办。`:'没有识别到需要行动的事项。';
+  if(arr.length){$('src').value='';setTimeout(()=>tab('list'),700)}
+ }catch(e){$('addmsg').textContent=errTxt(e)}
+ $('go').disabled=false;
+};
+
+$('brief').onclick=async()=>{
+ const p=pend();if(!p.length){$('briefout').textContent='当前没有待办，先去抓取识别吧～';return}
+ $('brief').disabled=true;$('briefout').textContent='生成中……';
+ try{
+  const data=p.map(t=>({任务:t.title,截止:t.deadlineText,截止ISO:t.deadline,材料:t.materials,优先级:t.priority}));
+  const r=await ai(`你是大学生校园事务整理Agent，现在是${today()}。根据待办JSON，用简洁亲切的中文写今日推送，分三块：🔥今天必须交的、⏳快截止的（48小时内）、🔔容易遗漏的（需提交多种材料或自愿但有时限）。每项一行，标明截止与材料，没有的块写“无”，最后给一句行动建议。不要使用markdown符号。\n${JSON.stringify(data)}`,false,{onText:({text})=>{$('briefout').textContent=text}});
+  $('briefout').textContent=r.text;
+ }catch(e){$('briefout').textContent=errTxt(e)}
+ $('brief').disabled=false;
+};
+
+$('donebtn').onclick=async()=>{
+ const s=$('done').value.trim();if(!s)return;const p=pend();
+ if(!p.length){$('donemsg').textContent='当前没有待办可归档。';return}
+ $('donebtn').disabled=true;$('donemsg').textContent='Agent 匹配中……';
+ try{
+  const r=await ai(`学生说：“${s}”。待办列表：${JSON.stringify(p.map(t=>({id:t.id,title:t.title,materials:t.materials})))}\n判断学生完成了哪项待办。只返回JSON：{"id":"匹配的id，无匹配则为空字符串","category":"报名表/问卷|回执|截图|作业|申报材料|打卡|其他 中选一个","note":"一句话凭证记录（做了什么、交了什么）"}`,true);
+  if(r&&r.id&&tasks.some(t=>t.id===r.id)){finish(r.id,r.note||s,r.category);$('donemsg').textContent='✅ 已归档：'+(r.note||s);$('done').value=''}
+  else $('donemsg').textContent='没有找到对应的待办，请说得更具体一些。';
+ }catch(e){$('donemsg').textContent=errTxt(e)}
+ $('donebtn').disabled=false;
+};
+$('q').oninput=render;
+render();
+</script>
+</body>
+</html>
